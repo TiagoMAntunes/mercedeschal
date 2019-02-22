@@ -1,0 +1,22 @@
+{
+    "services": [
+        {
+            "name": "Slack",
+            "url": "https://status.slack.com/",
+            "tag": "div",
+            "match": {
+                "id": "current_status"
+            },
+            "online": "Slack is up and running"
+        },
+        {
+            "name": "BitBucket",
+            "url": "https://status.bitbucket.org/",
+            "tag": "span",
+            "match": {
+                "class": "status font-large"
+            },
+            "online": "All Systems Operational"
+        }
+    ]
+}
