@@ -1,11 +1,14 @@
-#CLI Code Challenge for Mercedes-Benz.io
+# CLI Code Challenge for Mercedes-Benz.io
 
 *Made by:* Tiago Antunes
+
 *Email:* tiago.melo.antunes@tecnico.ulisboa.pt
+
 *University:* Instituto Superior Técnico
+
 *2nd year student*
 
-##What could be improved?
+## What could be improved?
 - Possible multi-threaded implementation
 - Data abstraction (creating some ADT's that could mask the implementation for simpler reading)
 - Improve the HTML parsing to be faster (instead of downloading the whole page, slowly fetch the page until we get the desired zone to analyze. This improvement would be noticeable in the BitBucket service, since the page is really heavy)
@@ -14,11 +17,11 @@
 - Implement status bonus command
 - Implement data restore for CSV and TXT formats
 
-##Decisions made while implementing
+## Decisions made while implementing
 - Python for speed of development and is easier to understand, while also being easy to improve some logic (funtion assignments, lambda functions)
 - HTML parsing and validation. Easy to implement, BeautifulSoup helps a lot by making it easy to parse the whole html
 - Flag mechanism receives what flags to pay attention and validates those flags, making it easier to validate data
 
-##Problems encountered during construction of program
+## Problems encountered during construction of program
 - Difficult to simulate some of the errors shown (lack of knowledge too)
 - No idea on how to calculate mttf
