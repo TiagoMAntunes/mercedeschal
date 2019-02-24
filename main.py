@@ -5,6 +5,8 @@ import sys
 import time
 from bs4 import BeautifulSoup
 
+FLAGPATTERN = re.compile('--[a-zA-Z]+=[\w,]+')
+
 
 class Service:
     def __init__(self, name, url, tag, match, online):
@@ -30,10 +32,39 @@ class Service:
         return ",".join([self.name, self.url, self.tag, str(self.match), self.online])
 
 
+def getFlagsCounted(args, validFlags):
+    flagList = list(filter(lambda x: re.match(FLAGPATTERN, x), args))
+    flags = {el: [] for el in validFlags}
+    for flag in flagList:
+        # checks if valid flag is the one used
+        for f in validFlags:
+            if f in flag:
+                # only selects the important part of the flag
+                flags[f].extend(flag[flag.find('=')+1:].split(','))
+                break
+    return flags
+
+
 def poll(services, args):
+    # finds flags and gets their information
+    flags = getFlagsCounted(args, ['only', 'exclude'])
+    #print(flags)
+    
+    # possible functions to be taken
+    def fn1(x): return True
+    def fn2(x): return x in flags["only"]
+    def fn3(x): return x not in flags['exclude']
+
+    fn = fn1
+    if len(flags["only"]) > 0:
+        fn = fn2
+    elif len(flags['exclude']) > 0:
+        fn = fn3
+
     for service in services:
-        print('[' + service.name + '] ' + time.asctime(time.localtime(time.time())
-                                                       ) + " - " + "up" if service.isOnline() else "down")
+        if (fn(service.name.lower())):
+            print('[' + service.name + '] ' + time.asctime(time.localtime(time.time())
+                                                           ) + " - " + "up" if service.isOnline() else "down")
 
 
 def fetch(services, args):
@@ -83,9 +114,11 @@ def restore(services, args):
     except ValueError:
         print('Invalid file')
 
+
 def displayServices(services, args):
     for service in services:
         print(service)
+
 
 if __name__ == '__main__':
     if len(sys.argv) <= 1:
@@ -109,14 +142,15 @@ if __name__ == '__main__':
         "history": history,
         "backup": backup,
         'restore': restore,
-        'services':displayServices
+        'services': displayServices
     }
 
     while True:
+        print('> ', end='')
         line = input().split()
         if len(line) == 0 or line[0] in ['exit', '']:
             break
         try:
             options[line[0]](services, line[1:])
-        except KeyError:
+        except KeyError as e:
             print('Invalid command')
