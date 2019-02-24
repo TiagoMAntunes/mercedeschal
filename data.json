@@ -1,0 +1,22 @@
+{
+    "records": [
+        {
+            "name": "Slack",
+            "data": [
+                {
+                    "time": 1551029631.248186,
+                    "status": "up"
+                }
+            ]
+        },
+        {
+            "name": "BitBucket",
+            "data": [
+                {
+                    "time": 1551029632.480859,
+                    "status": "up"
+                }
+            ]
+        }
+    ]
+}

@@ -7,7 +7,6 @@ from bs4 import BeautifulSoup
 
 FLAGPATTERN = re.compile('--[a-zA-Z]+=[\w,]+')
 
-
 class Service:
     def __init__(self, name, url, tag, match, online):
         self.name = name
@@ -18,6 +17,7 @@ class Service:
         self.records = []
 
     def isOnline(self):
+        """Makes a request to the service url and tries to match, analyzing the html and deciding if the service is online"""
         # connect to server and fetch html
         with urllib.request.urlopen(self.url) as url:
             # find the correct html tag
@@ -33,6 +33,7 @@ class Service:
 
 
 def getFlags(args, validFlags):
+    """ Receives a list of strings and the flags to analyze.\nReturns a dictionary with the information organized """
     flagList = list(filter(lambda x: re.match(FLAGPATTERN, x), args))
     flags = {el: [] for el in validFlags}
     for flag in flagList:
@@ -46,6 +47,7 @@ def getFlags(args, validFlags):
 
 
 def poll(services, args):
+    """ Evaluates if services the specified services are online """
     # finds flags and gets their information
     flags = getFlags(args, ['only', 'exclude'])
 
@@ -67,6 +69,7 @@ def poll(services, args):
 
 
 def fetch(services, args):
+    """ Calls poll function within a time interval """
     flags = getFlags(args, ['refresh'])
     if len(flags['refresh']) > 0:
         try:
@@ -83,6 +86,7 @@ def fetch(services, args):
 
 
 def history(services, args):
+    """ Gets data from storage and displays it to the user """
     flags = getFlags(args, ['only'])
 
     def f1(x): return True
@@ -98,6 +102,7 @@ def history(services, args):
 
 
 def backup(services, args):
+    """ Saves data to storage with a specified format """
     flags = getFlags(args, ['format'])
 
     if len(args) - len(flags['format']) < 1:
@@ -143,6 +148,7 @@ def backup(services, args):
 
 
 def restore(services, args):
+    """ Reads from storage (only in JSON) """
     flags = getFlags(args, ['merge'])
     if len(args) - len(flags['merge']) < 1:
         print('You need to specify the path where to save to')
@@ -163,7 +169,7 @@ def restore(services, args):
             data = json.load(f)['records']
             for el in data:
                 for s in services:
-                    if s.name == el['name']:
+                    if s.name == el['name'] and all(map(lambda x: x['time'] != el['data'][0]['time'], s.records)):
                         s.records = el['data'] if not merge else s.records + el['data']
                         break
     except IOError:
@@ -173,6 +179,7 @@ def restore(services, args):
 
 
 def displayServices(services, args):
+    """ Gets the information from all services """
     for service in services:
         print(service)
 
@@ -226,4 +233,5 @@ if __name__ == '__main__':
         try:
             options[line[0]](services, line[1:])
         except KeyError as e:
+            print(sys.exc_info())
             print('Invalid command')
