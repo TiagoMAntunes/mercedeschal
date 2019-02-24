@@ -32,7 +32,7 @@ class Service:
         return ",".join([self.name, self.url, self.tag, str(self.match), self.online])
 
 
-def getFlagsCounted(args, validFlags):
+def getFlags(args, validFlags):
     flagList = list(filter(lambda x: re.match(FLAGPATTERN, x), args))
     flags = {el: [] for el in validFlags}
     for flag in flagList:
@@ -47,9 +47,8 @@ def getFlagsCounted(args, validFlags):
 
 def poll(services, args):
     # finds flags and gets their information
-    flags = getFlagsCounted(args, ['only', 'exclude'])
-    #print(flags)
-    
+    flags = getFlags(args, ['only', 'exclude'])
+
     # possible functions to be taken
     def fn1(x): return True
     def fn2(x): return x in flags["only"]
@@ -68,46 +67,104 @@ def poll(services, args):
 
 
 def fetch(services, args):
+    flags = getFlags(args, ['refresh'])
+    if len(flags['refresh']) > 0:
+        try:
+            sleeptime = int(flags['refresh'][0])
+        except ValueError:
+            print("Refresh flag must be integer")
+            raise KeyError
+    else:
+        sleeptime = 5
+
     while True:
         poll(services, args)
-        time.sleep(5)
+        time.sleep(sleeptime)
 
 
 def history(services, args):
+    flags = getFlags(args, ['only'])
+
+    def f1(x): return True
+    def f2(x): return x in flags['only']
+    fn = f1
+    if len(flags['only']) > 0:
+        fn = f2
     for service in services:
-        for data in service.records:
-            print('[' + service.name + "] - " + "Time: " +
-                  time.asctime(time.localtime(data["time"])) + ", status: " + data["status"])
+        if fn(service.name.lower()):
+            for data in service.records:
+                print('[' + service.name + "] - " + "Time: " +
+                      time.asctime(time.localtime(data["time"])) + ", status: " + data["status"])
 
 
 def backup(services, args):
-    if len(args) < 1:
+    flags = getFlags(args, ['format'])
+
+    if len(args) - len(flags['format']) < 1:
         print('You need to specify the path where to save to')
         return
+
+    def f1(x, filepath): json.dump({'records': x}, filepath)  # json
+
+    def f2(x, filepath):
+        for data in x:
+            filepath.write(data['name']+'\n')
+            filepath.write(",".join(str(x) for x in data['data']) + '\n')
+
+    def f3(x, filepath):
+        for data in x:
+            filepath.write(data['name'] + ':' + ",".join(str(y)
+                                                         for y in data['data']) + '\n')
+
+    fn = f1
+    if len(flags['format']) > 0:
+        if 'txt' in flags['format']:
+            fn = f3
+        elif 'csv' in flags['format']:
+            fn = f2
+
+    # find path to write to
+    for key in args:
+        if not re.match(FLAGPATTERN, key):
+            path = key
+            break
+
     try:
         # writes to file data
-        with open(args[0], 'w+') as f:
+        with open(path, 'w+') as f:
             data = []
             # gets each service and its records
             for service in services:
                 data.append({"name": service.name, "data": service.records})
-            # dump data as json format
-            json.dump({"records": data}, f)
+
+            fn(data, f)
     except IOError:
         print('Path is invalid')
 
 
 def restore(services, args):
-    if len(args) < 1:
+    flags = getFlags(args, ['merge'])
+    if len(args) - len(flags['merge']) < 1:
         print('You need to specify the path where to save to')
         return
+    if len(flags['merge']) > 0 and 'true' in flags['merge']:
+        merge = True
+    else:
+        merge = False
+
+    # find path to write to
+    for key in args:
+        if not re.match(FLAGPATTERN, key):
+            path = key
+            break
+
     try:
-        with open(args[0]) as f:
+        with open(path) as f:
             data = json.load(f)['records']
             for el in data:
                 for s in services:
                     if s.name == el['name']:
-                        s.records = el['data']
+                        s.records = el['data'] if not merge else s.records + el['data']
                         break
     except IOError:
         print('Path is invalid')
@@ -118,6 +175,21 @@ def restore(services, args):
 def displayServices(services, args):
     for service in services:
         print(service)
+
+
+def help(*_):
+    options = [
+        ("poll", "Retrieves the status from all configured services"),
+        ("fetch", "Retrieves the status from all configured services"),
+        ("services", "Lists all known services"),
+        ("backup", "Backups the current internal state to a file"),
+        ('restore', "Imports the internal state from another run or app"),
+        ('history', "Outputs all the data from the local storage"),
+        ('help', "This screen")
+    ]
+    print('Commands:')
+    for option in options:
+        print('    ' + option[0] + ' - ' + option[1])
 
 
 if __name__ == '__main__':
@@ -142,13 +214,14 @@ if __name__ == '__main__':
         "history": history,
         "backup": backup,
         'restore': restore,
-        'services': displayServices
+        'services': displayServices,
+        'help': help
     }
 
     while True:
         print('> ', end='')
-        line = input().split()
-        if len(line) == 0 or line[0] in ['exit', '']:
+        line = input().lower().split()
+        if len(line) == 0 or line[0] in ['exit']:
             break
         try:
             options[line[0]](services, line[1:])
